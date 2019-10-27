@@ -1,13 +1,16 @@
 import gclib
 import time
+import threading
 
 class GclibWrapper:
 
     # #{ __init__()
 
-    def __init__(self, n_stages, step2deg, dummy=False):
+    def __init__(self, n_stages, step2deg, dummy=False, debug=False):
 
         self.dummy = dummy
+        self.debug = debug
+
         self.n_stages = n_stages
 
         print("Initializing galib")
@@ -18,6 +21,8 @@ class GclibWrapper:
         self.fast_delay = 0.1
         self.slow_delay = 1.0
         self.step2deg = step2deg
+
+        self.mutex_get_position = threading.Lock()
 
         if dummy:
             self.positions = []
@@ -118,11 +123,13 @@ class GclibWrapper:
                     command += ","
 
         if self.dummy:
-            print("Dummy command: {}".format(command))
+            if self.debug:
+                print("Dummy command: {}".format(command))
         else:
             res = []
             try:
-                print("Executing command: {}".format(command))
+                if self.debug:
+                    print("Executing command: {}".format(command))
                 self.g.GCommand(command)
             except ValueError as ve:
                 print("Error: ".format(ve))
@@ -151,11 +158,13 @@ class GclibWrapper:
                     command += ","
 
         if self.dummy:
-            print("Dummy command: {}".format(command))
+            if self.debug:
+                print("Dummy command: {}".format(command))
         else:
             res = []
             try:
-                print("Executing command: {}".format(command))
+                if self.debug:
+                    print("Executing command: {}".format(command))
                 self.g.GCommand(command)
             except ValueError as ve:
                 print("Error: ".format(ve))
@@ -184,11 +193,13 @@ class GclibWrapper:
                     command += ","
 
         if self.dummy:
-            print("Dummy command: {}".format(command))
+            if self.debug:
+                print("Dummy command: {}".format(command))
         else:
             res = []
             try:
-                print("Executing command: {}".format(command))
+                if self.debug:
+                    print("Executing command: {}".format(command))
                 self.g.GCommand(command)
             except ValueError as ve:
                 print("Error: ".format(ve))
@@ -207,11 +218,13 @@ class GclibWrapper:
         command="DP 0,0"
 
         if self.dummy:
-            print("Dummy command: {}".format(command))
+            if self.debug:
+                print("Dummy command: {}".format(command))
         else:
             res = []
             try:
-                print("Executing command: {}".format(command))
+                if self.debug:
+                    print("Executing command: {}".format(command))
                 self.g.GCommand(command)
             except ValueError as ve:
                 print("Error: ".format(ve))
@@ -246,11 +259,13 @@ class GclibWrapper:
                     command += ","
 
         if self.dummy:
-            print("Dummy command: {}".format(command))
+            if self.debug:
+                print("Dummy command: {}".format(command))
         else:
             res = []
             try:
-                print("Executing command: {}".format(command))
+                if self.debug:
+                    print("Executing command: {}".format(command))
                 self.g.GCommand(command)
             except ValueError as ve:
                 print("Error: ".format(ve))
@@ -285,11 +300,13 @@ class GclibWrapper:
                     command += ","
 
         if self.dummy:
-            print("Dummy command: {}".format(command))
+            if self.debug:
+                print("Dummy command: {}".format(command))
         else:
             res = []
             try:
-                print("Executing command: {}".format(command))
+                if self.debug:
+                    print("Executing command: {}".format(command))
                 self.g.GCommand(command)
             except ValueError as ve:
                 print("Error: ".format(ve))
@@ -320,11 +337,13 @@ class GclibWrapper:
         command = "SH"
 
         if self.dummy:
-            print("Dummy command: {}".format(command))
+            if self.debug:
+                print("Dummy command: {}".format(command))
         else:
             res = []
             try:
-                print("Executing command: {}".format(command))
+                if self.debug:
+                    print("Executing command: {}".format(command))
                 self.g.GCommand(command)
             except ValueError as ve:
                 print("Error: ".format(ve))
@@ -334,30 +353,43 @@ class GclibWrapper:
 
     # #} end of motorsOn()
 
-    # #{ getPosition()
+    # #{ getPositionSteps()
 
-    def getPosition(self, axis):
+    def getPositionSteps(self, axis):
+
+        self.mutex_get_position.acquire()
 
         command = "RP"+chr(axis+ord('A'))
 
         if self.dummy:
-            print("Dummy command: {}".format(command))
+            if self.debug:
+                print("Dummy command: {}".format(command))
 
+            self.mutex_get_position.release()
             return self.positions[axis]
         else:
             res = []
             try:
-                print("Executing command: {}".format(command))
+                if self.debug:
+                    print("Executing command: {}".format(command))
                 res = self.g.GCommand(command)
             except ValueError as ve:
                 print("Error: ".format(ve))
                 pass
 
+            self.mutex_get_position.release()
             return int(res)
 
-        time.sleep(self.fast_delay)
+    # #} end of getPositionSteps()
 
-    # #} end of getPosition()
+    # #{ getPositionSteps()
+
+    def getPositionUnit(self, axis):
+
+        current_position = self.getPositionSteps(axis)
+        return self.steps2unit(axis, current_position)
+
+    # #}
 
     # #{ moveRelative()
 
@@ -367,7 +399,7 @@ class GclibWrapper:
 
         amount_converted = self.unit2steps(axis, amount)
 
-        current_position = self.getPosition(axis)
+        current_position = self.getPositionSteps(axis)
         position_reference = current_position + amount_converted
 
         if not self.checkLimits(axis, position_reference):
@@ -392,7 +424,8 @@ class GclibWrapper:
         execution_time = float(amount)/float(self.steps2unit(axis, self.speed[axis]))
 
         if self.dummy:
-            print("Dummy command: {}".format(command))
+            if self.debug:
+                print("Dummy command: {}".format(command))
 
             print("Moving dummy stage {} relatively by {}, will take: {} s".format(axis, amount, execution_time))
             time.sleep(execution_time)
@@ -404,7 +437,8 @@ class GclibWrapper:
 
             res = []
             try:
-                print("Executing command: {}".format(command))
+                if self.debug:
+                    print("Executing command: {}".format(command))
                 res = self.g.GCommand(command)
             except ValueError as ve:
                 print("Error: ".format(ve))
@@ -417,7 +451,7 @@ class GclibWrapper:
         while abs(current_position - position_reference) >= self.steps2unit(axis, 0.01):
 
             print("Waiting for the motion to finish: current {} reference {}".format(current_position, position_reference))
-            current_position = self.getPosition(axis)
+            current_position = self.getPositionSteps(axis)
             time.sleep(1.0)
 
         time.sleep(1.0)
@@ -434,7 +468,7 @@ class GclibWrapper:
 
         amount_converted = self.unit2steps(axis, amount)
 
-        current_position = self.getPosition(axis)
+        current_position = self.getPositionSteps(axis)
         position_reference = amount_converted
 
         if not self.checkLimits(axis, position_reference):
@@ -449,7 +483,7 @@ class GclibWrapper:
                 if axis == i:
                     command += str(amount_converted)
                 else:
-                    command += str(self.getPosition(i))
+                    command += str(self.getPositionSteps(i))
 
                 if i < self.n_stages-1:
                     command += ","
@@ -461,7 +495,8 @@ class GclibWrapper:
         if self.dummy:
             print("Moving dummy stage {} to {}, will take: {} s".format(axis, amount, execution_time))
 
-            print("Dummy command: {}".format(command))
+            if self.debug:
+                print("Dummy command: {}".format(command))
 
             time.sleep(execution_time)
 
@@ -472,7 +507,8 @@ class GclibWrapper:
 
             res = []
             try:
-                print("Executing command: {}".format(command))
+                if self.debug:
+                    print("Executing command: {}".format(command))
                 res = self.g.GCommand(command)
             except ValueError as ve:
                 print("Error: ".format(ve))
@@ -483,7 +519,7 @@ class GclibWrapper:
         while abs(current_position - position_reference) >= self.steps2unit(axis, 0.01):
 
             print("Waiting for the motion to finish: current {} reference {}".format(current_position, position_reference))
-            current_position = self.getPosition(axis)
+            current_position = self.getPositionSteps(axis)
             time.sleep(1.0)
 
         time.sleep(1.0)
@@ -501,5 +537,7 @@ class GclibWrapper:
 
             if not result:
                 return False
+
+        return True
 
     # #} end of moveAllAbsolute()
