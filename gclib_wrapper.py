@@ -220,6 +220,9 @@ class GclibWrapper:
         if self.dummy:
             if self.debug:
                 print("Dummy command: {}".format(command))
+
+            for idx,value in enumerate(self.positions):
+                self.positions[idx] = 0
         else:
             res = []
             try:
@@ -228,9 +231,11 @@ class GclibWrapper:
                 self.g.GCommand(command)
             except ValueError as ve:
                 print("Error: ".format(ve))
-                pass
+                return False
 
         time.sleep(self.slow_delay)
+
+        return True
 
     # #} end of setAcceleration()
 
@@ -421,7 +426,7 @@ class GclibWrapper:
 
         command += ";BG;"
 
-        execution_time = float(amount)/float(self.steps2unit(axis, self.speed[axis]))
+        execution_time = abs(float(amount))/float(self.steps2unit(axis, self.speed[axis]))
 
         if self.dummy:
             if self.debug:
