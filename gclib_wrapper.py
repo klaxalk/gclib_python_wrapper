@@ -23,6 +23,7 @@ class GclibWrapper:
         self.step2deg = step2deg
 
         self.mutex_get_position = threading.Lock()
+        self.mutex_motion_lock = threading.Lock()
 
         if dummy:
             self.positions = []
@@ -228,7 +229,11 @@ class GclibWrapper:
             try:
                 if self.debug:
                     print("Executing command: {}".format(command))
+
+                self.mutex_motion_lock.acquire()
                 self.g.GCommand(command)
+                self.mutex_motion_lock.release()
+
             except ValueError as ve:
                 print("Error: ".format(ve))
                 return False
@@ -387,11 +392,16 @@ class GclibWrapper:
 
     # #} end of getPositionSteps()
 
-    # #{ getPositionSteps()
+    # #{ getPositionUnit()
 
     def getPositionUnit(self, axis):
 
+        self.mutex_motion_lock.acquire()
+
         current_position = self.getPositionSteps(axis)
+
+        self.mutex_motion_lock.release()
+
         return self.steps2unit(axis, current_position)
 
     # #}
@@ -399,6 +409,7 @@ class GclibWrapper:
     # #{ moveRelative()
 
     def moveRelative(self, axis, amount):
+
 
         command = "PR "
 
@@ -444,7 +455,9 @@ class GclibWrapper:
             try:
                 if self.debug:
                     print("Executing command: {}".format(command))
+                self.mutex_motion_lock.acquire()
                 res = self.g.GCommand(command)
+                self.mutex_motion_lock.release()
             except ValueError as ve:
                 print("Error: ".format(ve))
                 pass
@@ -514,7 +527,9 @@ class GclibWrapper:
             try:
                 if self.debug:
                     print("Executing command: {}".format(command))
+                self.mutex_motion_lock.acquire()
                 res = self.g.GCommand(command)
+                self.mutex_motion_lock.release()
             except ValueError as ve:
                 print("Error: ".format(ve))
                 pass
